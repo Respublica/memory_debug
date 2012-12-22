@@ -1,14 +1,14 @@
 #include <stdio.h>
-#include "memory_debug.hpp"
+#include "memory_tracker.hpp"
 
 
 int main(int argc,char *argv[])
 {
-	setTrackStackTrace(true);
+	MemoryTracker::setTrackStackTrace(true);
 	int* i = new int;
 	*i = 2;
 	//delete i;
-	printMemoryLeaks();
+	MemoryTracker::printMemoryLeaks();
 	getchar();
 	return 0;
 }
