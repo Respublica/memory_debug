@@ -9,7 +9,7 @@
 #include <new>
 #include <exception>
 
-// Prints all heap and reference leaks to stderr.
+// Prints all heap and reference leaks to stdout.
 extern void printMemoryLeaks();
 
 #ifdef _MSC_VER
