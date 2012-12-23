@@ -4,7 +4,7 @@
 
 #include <cstddef> // std::size_t
 #include <mutex>
-#include "basic_types.hpp"
+#include "base.hpp"
 
 
 class MemoryTracker
@@ -28,8 +28,6 @@ public:
 	// destructor
 	~MemoryTracker();
 	void printMemoryLeaks();
-	void setTrackStackTrace(bool trackStackTrace);
-	void toggleTrackStackTrace();
 
 	void* debugAlloc(std::size_t size, const char* file, int line);
 	void  debugFree(void* p);
@@ -42,8 +40,8 @@ private:
 	MemoryTracker &operator=(const MemoryTracker&);
 
 	void printStackTrace(MemoryAllocationRecord* rec);
+	void recordStackTrace(MemoryAllocationRecord* rec);
 
-	bool trackStackTrace_; 
 	MemoryAllocationRecord* memoryAllocations_;
 	int memoryAllocationCount_;
 	std::mutex list_mutex_;

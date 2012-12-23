@@ -23,8 +23,7 @@ MemoryTracker& MemoryTracker::instance()
 */
 MemoryTracker::MemoryTracker() :
 memoryAllocationCount_(0),
-memoryAllocations_(0),
-trackStackTrace_(false)
+memoryAllocations_(0)
 {
 }
 
@@ -55,63 +54,18 @@ void* MemoryTracker::debugAlloc(std::size_t size, const char* file, int line)
     rec->next = memoryAllocations_;
     rec->prev = 0;
 
-    // Capture the stack frame (up to kMaxStackFrames) if we 
-    // are running on Windows and the user has enabled it.
-    if (trackStackTrace_)
-    {
-#ifdef WIN32
-		// little trick to make sure we call SymInitialize only one time during tracking process
-        static bool initialized = false;
-        if (!initialized)
-        {
-            if (!SymInitialize(GetCurrentProcess(), NULL, true))
-                printf("Stack trace tracking will not work.\n");
-            initialized = true;
-        }
-    
-        // Get the current context (state of EBP, EIP, ESP registers).
-        static CONTEXT context;
-        RtlCaptureContext(&context);
-    
-        static STACKFRAME64 stackFrame;
-        memset(&stackFrame, 0, sizeof(STACKFRAME64));
+    // Capture the stack frame (up to kMaxStackFrames) 
+	this->recordStackTrace(rec);
 
-        // Initialize the stack frame based on the machine architecture.
-#ifdef _M_IX86
-        static const DWORD machineType = IMAGE_FILE_MACHINE_I386;
-        stackFrame.AddrPC.Offset = context.Eip;
-        stackFrame.AddrPC.Mode = AddrModeFlat;
-        stackFrame.AddrFrame.Offset = context.Ebp;
-        stackFrame.AddrFrame.Mode = AddrModeFlat;
-        stackFrame.AddrStack.Offset = context.Esp;
-        stackFrame.AddrStack.Mode = AddrModeFlat;
-#else
-#error "Machine architecture not supported!"
-#endif
-
-        // Walk up the stack and store the program counters.
-        memset(rec->pc, 0, sizeof(rec->pc));
-        for (int i = 0; i < kMaxStackFrames; i++)
-        {
-            rec->pc[i] = stackFrame.AddrPC.Offset;
-            if (!StackWalk64(machineType, GetCurrentProcess(), GetCurrentThread(), &stackFrame,
-                &context, NULL, SymFunctionTableAccess64, SymGetModuleBase64, NULL))
-            {
-                break;
-            }
-        }
-    }
-#endif // #ifdef WIN32
-
-	list_mutex_.lock();
+	this->list_mutex_.lock();
 	// add our allocation record to our double linked list and
 	// increment our internal counter in a thread safe maner
-    if (memoryAllocations_)
-        memoryAllocations_->prev = rec;
-    memoryAllocations_ = rec;
-    ++memoryAllocationCount_;
+    if (this->memoryAllocations_)
+        this->memoryAllocations_->prev = rec;
+    this->memoryAllocations_ = rec;
+    ++this->memoryAllocationCount_;
 
-	list_mutex_.unlock();
+	this->list_mutex_.unlock();
 
     return mem;
 }
@@ -138,15 +92,15 @@ void MemoryTracker::debugFree(void* p)
 
 
     // Link this item out of our doublel linked list
-	list_mutex_.lock();
-    if (memoryAllocations_ == rec)
-        memoryAllocations_ = rec->next;
+	this->list_mutex_.lock();
+    if (this->memoryAllocations_ == rec)
+        this->memoryAllocations_ = rec->next;
     if (rec->prev)
         rec->prev->next = rec->next;
     if (rec->next)
         rec->next->prev = rec->prev;
-    --memoryAllocationCount_;
-	list_mutex_.unlock();
+    --this->memoryAllocationCount_;
+	this->list_mutex_.unlock();
 
     // Free the address from the original alloc location (before mem allocation record)
     free(mem);
@@ -155,10 +109,57 @@ void MemoryTracker::debugFree(void* p)
 //------------------------------------------------------------------------------
 /**
 */
+#ifdef WIN32
+void MemoryTracker::recordStackTrace(MemoryAllocationRecord* rec)
+{
+	// little trick to make sure we call SymInitialize only one time during tracking process
+    static bool initialized = false;
+    if (!initialized)
+    {
+		if (!SymInitialize(GetCurrentProcess(), NULL, true))
+			printf("Stack trace tracking will not work.\n");
+
+        initialized = true;
+     }
+    
+	// Get the current context (state of EBP, EIP, ESP registers).
+    static CONTEXT context;
+    RtlCaptureContext(&context);
+    
+    static STACKFRAME64 stackFrame;
+    memset(&stackFrame, 0, sizeof(STACKFRAME64));
+
+        // Initialize the stack frame based on the machine architecture.
+#ifdef _M_IX86
+	static const DWORD machineType = IMAGE_FILE_MACHINE_I386;
+    stackFrame.AddrPC.Offset = context.Eip;
+    stackFrame.AddrPC.Mode = AddrModeFlat;
+    stackFrame.AddrFrame.Offset = context.Ebp;
+    stackFrame.AddrFrame.Mode = AddrModeFlat;
+    stackFrame.AddrStack.Offset = context.Esp;
+    stackFrame.AddrStack.Mode = AddrModeFlat;
+#else
+	#error "Machine architecture not supported!"
+#endif
+
+	// Walk up the stack and store the program counters.
+    memset(rec->pc, 0, sizeof(rec->pc));
+    for (int i = 0; i < kMaxStackFrames; i++)
+    {
+		rec->pc[i] = stackFrame.AddrPC.Offset;
+        if (!StackWalk64(machineType, GetCurrentProcess(), GetCurrentThread(), &stackFrame, &context, NULL, SymFunctionTableAccess64,							 SymGetModuleBase64, NULL))
+        {
+			break;
+        }
+    }
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
 void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
 {
     const unsigned int bufferSize = 512;
-#ifdef WIN32
     // Resolve the program counter to the corresponding function names.
     unsigned int pc;
     for (int i = 0; i < kMaxStackFrames; i++)
@@ -169,7 +170,7 @@ void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
             break;
 
         // Get the function name.
-        unsigned char buffer[sizeof(IMAGEHLP_SYMBOL64) + bufferSize];
+        byte buffer[sizeof(IMAGEHLP_SYMBOL64) + bufferSize];
         IMAGEHLP_SYMBOL64* symbol = (IMAGEHLP_SYMBOL64*)buffer;
         DWORD64 displacement;
         memset(symbol, 0, sizeof(IMAGEHLP_SYMBOL64) + bufferSize);
@@ -184,9 +185,11 @@ void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
             symbol->Name[bufferSize - 1] = '\0';
 
             // Check if we need to go further up the stack.
-            if (strncmp(symbol->Name, "operator new", 12) == 0)
+            if (strncmp(symbol->Name, "operator new", 12) == 0 ||
+				strncmp(symbol->Name, "MemoryTracker::debugAlloc", 25) == 0 ||
+				strncmp(symbol->Name, "MemoryTracker::debugFree", 24) == 0 )
             {
-                // In operator new or new[], keep going...
+                // ignore theses symbols.
             }
             else
             {
@@ -215,9 +218,18 @@ void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
             }
         }
     }
-
-#endif // #ifdef WIN32
 }
+
+#else // !WIN32
+
+void MemoryTracker::recordStackTrace(MemoryAllocationRecord* rec)
+{
+}
+	
+void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
+{
+}
+#endif // #ifdef WIN32
 
 //------------------------------------------------------------------------------
 /**
@@ -236,16 +248,8 @@ void MemoryTracker::printMemoryLeaks()
         MemoryAllocationRecord* rec = memoryAllocations_;
         while (rec)
         {
-
-            if (trackStackTrace_)
-            {
-                printf("LEAK: HEAP allocation leak at address %#x of size %d:\n", rec->address, rec->size);
-                printStackTrace(rec);
-            }
-            else
-                printf("LEAK: HEAP allocation leak at address %#x of size %d from line %d in file '%s'.\n", rec->address, 
-																											rec->size, rec->line, 
-																											rec->file);
+			printf("LEAK: HEAP allocation leak at address %#x of size %d:\n", rec->address, rec->size);
+            printStackTrace(rec);
 			rec = rec->next;
         }
     }
@@ -257,20 +261,4 @@ void MemoryTracker::printMemoryLeaks()
 int MemoryTracker::allocation_count() const
 {
 	return this->memoryAllocationCount_;
-}
-
-//------------------------------------------------------------------------------
-/**
-*/
-void MemoryTracker::setTrackStackTrace(bool trackStackTrace)
-{
-    trackStackTrace_ = trackStackTrace;
-}
-
-//------------------------------------------------------------------------------
-/**
-*/
-void MemoryTracker::toggleTrackStackTrace()
-{
-    trackStackTrace_ = !trackStackTrace_;
 }

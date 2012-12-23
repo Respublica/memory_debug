@@ -76,7 +76,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="basic_types.hpp" />
+    <ClInclude Include="base.hpp" />
     <ClInclude Include="memory_debug.hpp" />
     <ClInclude Include="memory_tracker.hpp" />
   </ItemGroup>
