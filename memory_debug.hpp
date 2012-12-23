@@ -1,5 +1,5 @@
-#ifndef MEMORY_DEBUG_H_
-#define MEMORY_DEBUG_H_
+#ifndef MEMORY_DEBUG_HPP_
+#define MEMORY_DEBUG_HPP_
 
 #ifdef _DEBUG
 /**
@@ -38,4 +38,4 @@ void operator delete[] (void* p, const char* file = __FILE__, int line = __LINE_
 
 #endif // #ifdef _DEBUG
 
-#endif // MEMORY_DEBUG_H_
+#endif // MEMORY_DEBUG_HPP_

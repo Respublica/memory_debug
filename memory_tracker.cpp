@@ -9,13 +9,18 @@
 #pragma comment(lib,"dbghelp.lib")
 #endif
 
-
+//------------------------------------------------------------------------------
+/**
+*/
 MemoryTracker& MemoryTracker::instance()
 {  
     static MemoryTracker instance;
     return instance;  
 }
 
+//------------------------------------------------------------------------------
+/**
+*/
 MemoryTracker::MemoryTracker() :
 memoryAllocationCount_(0),
 memoryAllocations_(0),
@@ -23,21 +28,27 @@ trackStackTrace_(false)
 {
 }
 
+//------------------------------------------------------------------------------
+/**
+*/
 MemoryTracker::~MemoryTracker()
 {
 }
 
+//------------------------------------------------------------------------------
+/**
+*/
 void* MemoryTracker::debugAlloc(std::size_t size, const char* file, int line)
 {
     // Allocate memory + size for a MemoryAlloctionRecord
-    unsigned char* mem = (unsigned char*)malloc(size + sizeof(MemoryAllocationRecord));
+    byte* mem = (byte*)malloc(size + sizeof(MemoryAllocationRecord));
 
     MemoryAllocationRecord* rec = (MemoryAllocationRecord*)mem;
 
     // Move memory pointer past record
     mem += sizeof(MemoryAllocationRecord);
 
-    rec->address = (unsigned long)mem;
+    rec->address = (address_type)mem;
     rec->size = size;
     rec->file = file;
     rec->line = line;
@@ -100,18 +111,21 @@ void* MemoryTracker::debugAlloc(std::size_t size, const char* file, int line)
     return mem;
 }
 
+//------------------------------------------------------------------------------
+/**
+*/
 void MemoryTracker::debugFree(void* p)
 {
     if (p == 0)
         return;
 
     // Backup passed in pointer to access memory allocation record
-    void* mem = ((unsigned char*)p) - sizeof(MemoryAllocationRecord);
+    void* mem = ((byte*)p) - sizeof(MemoryAllocationRecord);
 
     MemoryAllocationRecord* rec = (MemoryAllocationRecord*)mem;
 
     // Sanity check: ensure that address in record matches passed in address
-    if (rec->address != (unsigned long)p)
+    if (rec->address != (address_type)p)
     {
         printf("CORRUPTION: Attempting to free memory address with invalid memory allocation record.\n");
         return;
@@ -130,7 +144,9 @@ void MemoryTracker::debugFree(void* p)
     free(mem);
 }
 
-
+//------------------------------------------------------------------------------
+/**
+*/
 void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
 {
     const unsigned int bufferSize = 512;
@@ -195,16 +211,20 @@ void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
 #endif // #ifdef WIN32
 }
 
+//------------------------------------------------------------------------------
+/**
+*/
 void MemoryTracker::printMemoryLeaks()
 {
     // Dump general heap memory leaks
-    if (memoryAllocationCount_ == 0)
+	if (this->allocation_count() == 0)
     {
         printf("All HEAP allocations successfully cleaned up (no leaks detected).\n");
     }
     else
     {
-        printf("WARNING: %d HEAP allocations still active in memory.\n", memoryAllocationCount_);
+        printf("WARNING: %d HEAP allocations still active in memory.\n", this->allocation_count());
+
         MemoryAllocationRecord* rec = memoryAllocations_;
         while (rec)
         {
@@ -223,11 +243,25 @@ void MemoryTracker::printMemoryLeaks()
     }
 }
 
+//------------------------------------------------------------------------------
+/**
+*/
+int MemoryTracker::allocation_count() const
+{
+	return this->memoryAllocationCount_;
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
 void MemoryTracker::setTrackStackTrace(bool trackStackTrace)
 {
     trackStackTrace_ = trackStackTrace;
 }
 
+//------------------------------------------------------------------------------
+/**
+*/
 void MemoryTracker::toggleTrackStackTrace()
 {
     trackStackTrace_ = !trackStackTrace_;
