@@ -4,6 +4,7 @@
 
 #include <cstddef> // std::size_t
 #include <mutex>
+#include <functional>
 #include "base.hpp"
 
 
@@ -11,6 +12,7 @@ class MemoryTracker
 {
 public:
 	static const int kMaxStackFrames = 16; // maximum number of stack's frame allowed to capture
+	typedef std::function<void(const std::string&)> log_function;
 
 	struct MemoryAllocationRecord
 	{
@@ -32,6 +34,7 @@ public:
 	void* debugAlloc(std::size_t size, const char* file, int line);
 	void  debugFree(void* p);
 
+	void setLogFunction(const log_function& logfunc);
 	int allocation_count() const;
 	static MemoryTracker& instance();
 private:
@@ -42,6 +45,9 @@ private:
 	void printStackTrace(MemoryAllocationRecord* rec);
 	void recordStackTrace(MemoryAllocationRecord* rec);
 
+	void log(const std::string& message);
+
+	log_function current_log_function_;
 	MemoryAllocationRecord* memoryAllocations_;
 	int memoryAllocationCount_;
 	std::mutex list_mutex_;

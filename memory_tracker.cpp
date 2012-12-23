@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstdarg>
+#include <iostream>
 
 #ifdef WIN32
 #include <windows.h>
@@ -86,7 +87,7 @@ void MemoryTracker::debugFree(void* p)
     // Sanity check: ensure that address in record matches passed in address
     if (rec->address != (address_type)p)
     {
-        printf("CORRUPTION: Attempting to free memory address with invalid memory allocation record.\n");
+        this->log("CORRUPTION: Attempting to free memory address with invalid memory allocation record.");
         return;
     }
 
@@ -117,7 +118,7 @@ void MemoryTracker::recordStackTrace(MemoryAllocationRecord* rec)
     if (!initialized)
     {
 		if (!SymInitialize(GetCurrentProcess(), NULL, true))
-			printf("Stack trace tracking will not work.\n");
+			this->log("Stack trace tracking will not work.");
 
         initialized = true;
      }
@@ -125,13 +126,13 @@ void MemoryTracker::recordStackTrace(MemoryAllocationRecord* rec)
 	// Get the current context (state of EBP, EIP, ESP registers).
     static CONTEXT context;
     RtlCaptureContext(&context);
-    
+	
     static STACKFRAME64 stackFrame;
     memset(&stackFrame, 0, sizeof(STACKFRAME64));
 
-        // Initialize the stack frame based on the machine architecture.
-#ifdef _M_IX86
 	static const DWORD machineType = IMAGE_FILE_MACHINE_I386;
+    // Initialize the stack frame based on the machine architecture.
+#ifdef _M_IX86
     stackFrame.AddrPC.Offset = context.Eip;
     stackFrame.AddrPC.Mode = AddrModeFlat;
     stackFrame.AddrFrame.Offset = context.Ebp;
@@ -178,7 +179,7 @@ void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
         symbol->MaxNameLength = bufferSize;
         if (!SymGetSymFromAddr64(GetCurrentProcess(), pc, &displacement, symbol))
         {
-            printf("STACK TRACE: <unknown location>\n");
+            this->log("STACK TRACE: <unknown location>");
         }
         else
         {
@@ -197,12 +198,12 @@ void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
                 if (pc != 0)
                 {
                     IMAGEHLP_LINE64 line;
-                    DWORD displacement;
+                    DWORD displacement = 0;
                     memset(&line, 0, sizeof(line));
                     line.SizeOfStruct = sizeof(line);
                     if (!SymGetLineFromAddr64(GetCurrentProcess(), pc, &displacement, &line))
                     {
-                        printf("STACK TRACE: %s - <unknown file>:<unknown line number>\n", symbol->Name);
+                        this->log(format("STACK TRACE: %s - <unknown file>:<unknown line number>", symbol->Name));
                     }
                     else
                     {
@@ -212,7 +213,7 @@ void MemoryTracker::printStackTrace(MemoryAllocationRecord* rec)
                         else
                             file++;
                         
-                        printf("STACK TRACE: %s - %s:%d\n", symbol->Name, file, line.LineNumber);
+                        this->log(format("STACK TRACE: %s - %s:%d", symbol->Name, file, line.LineNumber));
                     }
                 }
             }
@@ -239,20 +240,40 @@ void MemoryTracker::printMemoryLeaks()
     // Dump general heap memory leaks
 	if (this->allocation_count() == 0)
     {
-        printf("All HEAP allocations successfully cleaned up (no leaks detected).\n");
+        this->log("All HEAP allocations successfully cleaned up (no leaks detected).");
     }
     else
     {
-        printf("WARNING: %d HEAP allocations still active in memory.\n", this->allocation_count());
+        this->log(format("WARNING: %d HEAP allocations still active in memory.", this->allocation_count()));
 
         MemoryAllocationRecord* rec = memoryAllocations_;
         while (rec)
         {
-			printf("LEAK: HEAP allocation leak at address %#x of size %d:\n", rec->address, rec->size);
+			this->log(format("LEAK: HEAP allocation leak at address %#x of size %d :", rec->address, rec->size));
             printStackTrace(rec);
 			rec = rec->next;
         }
     }
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
+void MemoryTracker::log(const std::string& message)
+{
+  auto log_func = this->current_log_function_;
+  if(log_func)
+	log_func( message );
+  else 
+	  std::cout << message.c_str() << "\n";
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
+void MemoryTracker::setLogFunction(const log_function& logfunc)
+{
+	this->current_log_function_ = logfunc;
 }
 
 //------------------------------------------------------------------------------

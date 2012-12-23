@@ -14,5 +14,9 @@
 typedef unsigned char byte;
 typedef unsigned int  uint;
 
+#include <stdarg.h>
+#include <string>
+
+std::string format(const char *fmt, ...);
 
 #endif // BASIC_TYPES_HPP_

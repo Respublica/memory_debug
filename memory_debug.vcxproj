@@ -81,6 +81,7 @@
     <ClInclude Include="memory_tracker.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="base.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="memory_debug.cpp" />
     <ClCompile Include="memory_tracker.cpp" />
