@@ -6,8 +6,6 @@
 #include <new>
 #include <exception>
 
-
-
 #ifdef _MSC_VER
 #pragma warning( disable : 4290 )
 #endif
@@ -62,9 +60,6 @@ void operator delete[] (void* p, const char* file, int line) throw()
     operator delete (p);
 }
 
-#ifdef _MSC_VER
-#pragma warning( default : 4290 )
-#endif
 
 
 #endif // _DEBUG

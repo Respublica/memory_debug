@@ -28,12 +28,10 @@ void operator delete[] (void* p) throw();
 void operator delete (void* p, const char* file = __FILE__, int line = __LINE__) throw();
 void operator delete[] (void* p, const char* file = __FILE__, int line = __LINE__) throw();
 
-#ifdef _MSC_VER
-#pragma warning( default : 4290 )
-#endif
 
-
-
+// Re-define new to use versions with file and line number so it's make everything transparent :)
+#define DEBUG_NEW new (__FILE__, __LINE__) 		
+#define new DEBUG_NEW
 
 
 #endif // #ifdef _DEBUG

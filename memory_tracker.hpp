@@ -3,8 +3,9 @@
 
 
 #include <cstddef> // std::size_t
-#include <map>
+#include <mutex>
 #include "basic_types.hpp"
+
 
 class MemoryTracker
 {
@@ -45,6 +46,7 @@ private:
 	bool trackStackTrace_; 
 	MemoryAllocationRecord* memoryAllocations_;
 	int memoryAllocationCount_;
+	std::mutex list_mutex_;
 };
 
 

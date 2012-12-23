@@ -4,7 +4,7 @@
 
 int main(int argc,char *argv[])
 {
-	MemoryTracker::instance().setTrackStackTrace(true);
+	MemoryTracker::instance().setTrackStackTrace(false);
 	int* i = new int;
 	*i = 2;
 	//delete i;

@@ -103,10 +103,15 @@ void* MemoryTracker::debugAlloc(std::size_t size, const char* file, int line)
     }
 #endif // #ifdef WIN32
 
+	list_mutex_.lock();
+	// add our allocation record to our double linked list and
+	// increment our internal counter in a thread safe maner
     if (memoryAllocations_)
         memoryAllocations_->prev = rec;
     memoryAllocations_ = rec;
     ++memoryAllocationCount_;
+
+	list_mutex_.unlock();
 
     return mem;
 }
@@ -131,7 +136,9 @@ void MemoryTracker::debugFree(void* p)
         return;
     }
 
-    // Link this item out
+
+    // Link this item out of our doublel linked list
+	list_mutex_.lock();
     if (memoryAllocations_ == rec)
         memoryAllocations_ = rec->next;
     if (rec->prev)
@@ -139,6 +146,7 @@ void MemoryTracker::debugFree(void* p)
     if (rec->next)
         rec->next->prev = rec->prev;
     --memoryAllocationCount_;
+	list_mutex_.unlock();
 
     // Free the address from the original alloc location (before mem allocation record)
     free(mem);
