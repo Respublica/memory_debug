@@ -14,7 +14,7 @@
 
 void* operator new (std::size_t size, const char* file, int line)
 {
-    return MemoryTracker::debugAlloc(size, file, line);
+    return MemoryTracker::instance().debugAlloc(size, file, line);
 }
 
 void* operator new[] (std::size_t size, const char* file, int line)
@@ -44,7 +44,7 @@ void* operator new[] (std::size_t size, const std::nothrow_t&) throw()
 
 void operator delete (void* p) throw()
 {
-    MemoryTracker::debugFree(p);
+    MemoryTracker::instance().debugFree(p);
 }
 
 void operator delete[] (void* p) throw()

@@ -4,11 +4,11 @@
 
 int main(int argc,char *argv[])
 {
-	MemoryTracker::setTrackStackTrace(true);
+	MemoryTracker::instance().setTrackStackTrace(true);
 	int* i = new int;
 	*i = 2;
 	//delete i;
-	MemoryTracker::printMemoryLeaks();
+	MemoryTracker::instance().printMemoryLeaks();
 	getchar();
 	return 0;
 }

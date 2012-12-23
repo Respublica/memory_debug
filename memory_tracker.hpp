@@ -4,7 +4,6 @@
 
 #include <cstddef> // std::size_t
 
-
 class MemoryTracker
 {
 public:
@@ -21,21 +20,25 @@ public:
 		unsigned int pc[kMaxStackFrames];  // captured frames of the allocation request
 	};
 
-	static void printMemoryLeaks();
-	static void setTrackStackTrace(bool trackStackTrace);
-	static void toggleTrackStackTrace();
+	MemoryTracker();
+	~MemoryTracker();
+	void printMemoryLeaks();
+	void setTrackStackTrace(bool trackStackTrace);
+	void toggleTrackStackTrace();
 
-	static void* debugAlloc(std::size_t size, const char* file, int line);
-	static void  debugFree(void* p);
+	void* debugAlloc(std::size_t size, const char* file, int line);
+	void  debugFree(void* p);
+
+	static MemoryTracker& instance();
 private:
 	// dissalow class copy and assignment
 	MemoryTracker(const MemoryTracker&);    
 	MemoryTracker &operator=(const MemoryTracker&);
-	static void printStackTrace(MemoryAllocationRecord* rec);
+	void printStackTrace(MemoryAllocationRecord* rec);
 
-	static bool trackStackTrace_; 
-	static MemoryAllocationRecord* memoryAllocations_;
-	static int memoryAllocationCount_;
+	bool trackStackTrace_; 
+	MemoryAllocationRecord* memoryAllocations_;
+	int memoryAllocationCount_;
 };
 
 

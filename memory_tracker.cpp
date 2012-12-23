@@ -9,9 +9,23 @@
 #pragma comment(lib,"dbghelp.lib")
 #endif
 
-bool MemoryTracker::trackStackTrace_ = false;
-MemoryTracker::MemoryAllocationRecord* MemoryTracker::memoryAllocations_ = 0;
-int MemoryTracker::memoryAllocationCount_ = 0;
+
+MemoryTracker& MemoryTracker::instance()
+{  
+    static MemoryTracker instance;
+    return instance;  
+}
+
+MemoryTracker::MemoryTracker() :
+memoryAllocationCount_(0),
+memoryAllocations_(0),
+trackStackTrace_(false)
+{
+}
+
+MemoryTracker::~MemoryTracker()
+{
+}
 
 void* MemoryTracker::debugAlloc(std::size_t size, const char* file, int line)
 {
