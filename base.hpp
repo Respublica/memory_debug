@@ -17,6 +17,12 @@ typedef unsigned int  uint;
 #include <stdarg.h>
 #include <string>
 
+
+#ifdef _MSC_VER
+#pragma warning(disable : 4244) // possible losing of data upon convertion
+#pragma warning(disable : 4996) // vsnprintf unsafe/deprecated
+#endif
+
 std::string format(const char *fmt, ...);
 
 #endif // BASIC_TYPES_HPP_

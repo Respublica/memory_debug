@@ -29,9 +29,8 @@ void operator delete (void* p, const char* file = __FILE__, int line = __LINE__)
 void operator delete[] (void* p, const char* file = __FILE__, int line = __LINE__) throw();
 
 
-// Re-define new to use versions with file and line number so it's make everything transparent :)
-#define DEBUG_NEW new (__FILE__, __LINE__) 		
-#define new DEBUG_NEW
+//#define DEBUG_NEW new (__FILE__, __LINE__) 		
+//#define new DEBUG_NEW
 
 
 #endif // #ifdef _DEBUG
